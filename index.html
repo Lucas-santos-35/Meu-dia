@@ -1,43 +1,665 @@
-const CACHE_NAME = 'elite-stealth-v1';
-const ASSETS = [
-  'dashboard.html',
-  'manifest.json',
-  'https://cdn.tailwindcss.com',
-  'https://unpkg.com/lucide@latest',
-  'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap'
-];
+<!DOCTYPE html>
+<html lang="pt-br" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Meu Dia</title>
+    <!-- Link para o Manifesto -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#FF7A00">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #0b0b0b;
+            --bg-slate: #161616;
+            --text-main: #ffffff;
+            --text-dim: #888888;
+            --inter-orange: #FF7A00;
+            --inter-orange-soft: rgba(255, 122, 0, 0.15);
+            --inter-orange-text: #FF9130;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --card-bg: #1a1a1a;
+            --input-bg: #222222;
+            --border-color: rgba(255, 255, 255, 0.07);
+        }
 
-// Instalação: Cache de ativos essenciais
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
-    })
-  );
-  self.skipWaiting();
-});
+        [data-theme="light"] {
+            --bg-deep: #f8f9fa;
+            --bg-slate: #ffffff;
+            --text-main: #1a1a1a;
+            --text-dim: #717171;
+            --inter-orange-soft: rgba(255, 122, 0, 0.1);
+            --inter-orange-text: #E66E00;
+            --glass: rgba(0, 0, 0, 0.03);
+            --glass-border: rgba(0, 0, 0, 0.08);
+            --card-bg: #ffffff;
+            --input-bg: #f1f1f1;
+            --border-color: rgba(0, 0, 0, 0.08);
+        }
 
-// Ativação: Limpeza de caches antigos
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME) {
-            return caches.delete(cache);
-          }
-        })
-      );
-    })
-  );
-});
+        * { -webkit-tap-highlight-color: transparent; user-select: none; }
 
-// Estratégia: Network First (Tenta rede, se falhar usa cache)
-// Ideal para apps que atualizam dados frequentemente
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    fetch(event.request).catch(() => {
-      return caches.match(event.request);
-    })
-  );
-});
+        body { 
+            background: #000;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            color: var(--text-main);
+            overflow: hidden;
+        }
+
+        .phone-shell {
+            width: 100%;
+            max-width: 430px;
+            height: 100%;
+            max-height: 932px;
+            background: var(--bg-deep);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 0 100px rgba(0,0,0,0.5);
+        }
+
+        @media (min-width: 450px) {
+            .phone-shell {
+                border-radius: 40px;
+                height: 90vh;
+                border: 8px solid #222;
+            }
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .top-nav {
+            background: var(--bg-slate);
+            border-bottom: 1px solid var(--border-color);
+            padding: 60px 10px 15px 10px;
+            display: flex;
+            justify-content: space-around;
+            z-index: 100;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            color: var(--text-dim);
+            font-size: 8px;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            padding: 10px 5px;
+            border-radius: 16px;
+            flex: 1;
+            text-align: center;
+        }
+
+        .nav-item i { width: 20px; height: 20px; transition: transform 0.3s; }
+        .nav-item.active { color: var(--inter-orange); background: var(--inter-orange-soft); }
+        .nav-item.active i { transform: scale(1.1); }
+
+        .section-view {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            padding: 24px;
+            overflow-y: auto;
+        }
+
+        .section-view.active { display: flex; }
+
+        .inter-input {
+            background: var(--input-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 16px;
+            font-size: 15px;
+            color: var(--text-main);
+            outline: none;
+            width: 100%;
+            transition: border-color 0.2s;
+        }
+        .inter-input:focus { border-color: var(--inter-orange); }
+
+        #calendar-section {
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 1000px;
+            opacity: 1;
+            margin-bottom: 24px;
+        }
+
+        #calendar-section.collapsed {
+            max-height: 0;
+            opacity: 0;
+            margin-bottom: 0;
+            pointer-events: none;
+            transform: translateY(-20px);
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .calendar-day:active { transform: scale(0.85); background: var(--inter-orange-soft); }
+        .day-plantao { background: var(--inter-orange-soft); color: var(--inter-orange-text); }
+        .day-folga { background: var(--glass); color: var(--text-dim); }
+        .day-today { border: 2px solid var(--inter-orange); position: relative; }
+
+        .modal-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.9);
+            backdrop-filter: blur(15px);
+            z-index: 200;
+            display: none;
+            align-items: flex-end;
+            padding: 20px;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal-content {
+            background: var(--bg-slate);
+            width: 100%;
+            padding: 32px 24px 40px 24px;
+            border-radius: 32px;
+            border: 1px solid var(--glass-border);
+            animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .item-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 18px;
+            border-radius: 20px;
+        }
+
+        .fab {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: var(--inter-orange);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            box-shadow: 0 10px 25px rgba(255, 122, 0, 0.4);
+            z-index: 150;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .fab:active { transform: scale(0.9); }
+
+        .quick-action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .action-btn {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            padding: 18px;
+            border-radius: 20px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="phone-shell">
+        <nav class="top-nav">
+            <button onclick="switchView('trabalho')" class="nav-item active" id="nav-trabalho">
+                <i data-lucide="briefcase"></i><span>Trabalho</span>
+            </button>
+            <button onclick="switchView('espiritualidade')" class="nav-item" id="nav-espiritualidade">
+                <i data-lucide="sparkles"></i><span>Espiritualidade</span>
+            </button>
+            <button onclick="switchView('pais')" class="nav-item" id="nav-pais">
+                <i data-lucide="heart"></i><span>Família</span>
+            </button>
+            <button onclick="switchView('lar')" class="nav-item" id="nav-lar">
+                <i data-lucide="home"></i><span>Lar</span>
+            </button>
+            <button onclick="switchView('financas')" class="nav-item" id="nav-financas">
+                <i data-lucide="wallet"></i><span>Finanças</span>
+            </button>
+        </nav>
+
+        <div class="px-6 py-4 flex justify-between items-center bg-[var(--bg-deep)]">
+            <h1 class="text-2xl font-black tracking-tighter">Meu <span class="text-[var(--inter-orange)]">Dia</span></h1>
+            <div class="flex gap-2">
+                <button onclick="toggleCalendar()" class="w-10 h-10 rounded-full glass-card flex items-center justify-center border border-[var(--glass-border)]">
+                    <i id="cal-toggle-icon" data-lucide="calendar-off" class="w-4 h-4 text-[var(--inter-orange)]"></i>
+                </button>
+                <button onclick="toggleTheme()" class="w-10 h-10 rounded-full glass-card flex items-center justify-center border border-[var(--glass-border)]">
+                    <i id="theme-icon" data-lucide="moon" class="w-4 h-4 text-[var(--text-dim)]"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="fab" onclick="openContextualAction()">
+            <i data-lucide="plus" class="w-8 h-8"></i>
+        </div>
+
+        <!-- MODAL GLOBAL -->
+        <div id="global-modal" class="modal-overlay" onclick="if(event.target === this) closeModal()">
+            <div class="modal-content">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 id="modal-title" class="text-xl font-black text-[var(--text-main)]">Novo Registro</h2>
+                        <p id="selected-date-display" class="text-[10px] font-bold text-[var(--inter-orange-text)] mt-1 uppercase tracking-widest">--/--</p>
+                    </div>
+                    <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-[var(--glass)] flex items-center justify-center">
+                        <i data-lucide="x" class="w-4 h-4 text-[var(--text-dim)]"></i>
+                    </button>
+                </div>
+                
+                <div id="modal-fields" class="space-y-4"></div>
+                
+                <div id="quick-selection" class="quick-action-grid">
+                    <button onclick="setupEntry('trabalho')" class="action-btn"><i data-lucide="briefcase" class="w-5 h-5"></i>Trabalho</button>
+                    <button onclick="setupEntry('financas')" class="action-btn"><i data-lucide="wallet" class="w-5 h-5"></i>Finanças</button>
+                    <button onclick="setupEntry('espiritualidade')" class="action-btn"><i data-lucide="sparkles" class="w-5 h-5"></i>Espiritualidade</button>
+                    <button onclick="setupEntry('lar')" class="action-btn"><i data-lucide="home" class="w-5 h-5"></i>Lar</button>
+                </div>
+
+                <div class="flex gap-3 mt-8">
+                    <button onclick="handleModalSave()" id="btn-confirm" class="flex-1 py-4 rounded-2xl bg-[#FF7A00] text-white font-black text-sm uppercase hidden shadow-lg shadow-orange-900/20">Salvar Registro</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto no-scrollbar pb-24">
+            <!-- CALENDÁRIO -->
+            <div id="calendar-section" class="px-6">
+                <div class="item-card bg-[var(--bg-slate)] border-none">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 id="cal-month-name" class="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-dim)]">Fevereiro 2026</h3>
+                        <div class="flex gap-3">
+                            <button onclick="changeMonth(-1)" class="w-8 h-8 rounded-full flex items-center justify-center bg-[var(--glass)]"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                            <button onclick="changeMonth(1)" class="w-8 h-8 rounded-full flex items-center justify-center bg-[var(--glass)]"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                        </div>
+                    </div>
+                    <div class="calendar-grid mb-3 opacity-30">
+                        <div class="text-center text-[9px] font-black">DOM</div><div class="text-center text-[9px] font-black">SEG</div><div class="text-center text-[9px] font-black">TER</div><div class="text-center text-[9px] font-black">QUA</div><div class="text-center text-[9px] font-black">QUI</div><div class="text-center text-[9px] font-black">SEX</div><div class="text-center text-[9px] font-black">SÁB</div>
+                    </div>
+                    <div id="calendar-body" class="calendar-grid"></div>
+                </div>
+            </div>
+
+            <!-- VIEW TRABALHO -->
+            <div id="view-trabalho" class="section-view active">
+                <div class="flex justify-between items-baseline mb-2">
+                    <h2 class="text-3xl font-black">Trabalho</h2>
+                    <span id="total-geral" class="text-xl font-black text-[#FF7A00]">R$ 0,00</span>
+                </div>
+                <div class="flex gap-2 mb-6 overflow-x-auto no-scrollbar">
+                    <div class="bg-[var(--glass)] border border-[var(--glass-border)] p-3 rounded-2xl min-w-[120px]">
+                        <p class="text-[8px] font-bold text-[var(--text-dim)] uppercase tracking-widest">Vânia</p>
+                        <p id="subtotal-vania" class="text-xs font-black">R$ 0,00</p>
+                    </div>
+                    <div class="bg-[var(--glass)] border border-[var(--glass-border)] p-3 rounded-2xl min-w-[120px]">
+                        <p class="text-[8px] font-bold text-[var(--text-dim)] uppercase tracking-widest">Extras</p>
+                        <p id="subtotal-extras" class="text-xs font-black">R$ 0,00</p>
+                    </div>
+                </div>
+                <div id="delivery-history" class="space-y-3"></div>
+            </div>
+
+            <div id="view-espiritualidade" class="section-view">
+                <h2 class="text-3xl font-black mb-6 text-[#FF7A00]">Espiritualidade</h2>
+                <div id="list-espiritualidade" class="space-y-3"></div>
+            </div>
+
+            <div id="view-pais" class="section-view">
+                <h2 class="text-3xl font-black mb-6">Família</h2>
+                <div id="list-pais" class="space-y-3"></div>
+            </div>
+
+            <div id="view-lar" class="section-view">
+                <h2 class="text-3xl font-black mb-6">Casa</h2>
+                <div id="list-lar" class="space-y-3"></div>
+            </div>
+
+            <div id="view-financas" class="section-view">
+                <h2 class="text-3xl font-black mb-6">Finanças</h2>
+                <div class="space-y-6">
+                    <div class="space-y-3">
+                        <h3 class="text-[10px] font-bold text-red-500 uppercase tracking-widest px-1">Despesas</h3>
+                        <div id="list-gastos" class="space-y-2"></div>
+                    </div>
+                    <div class="space-y-3">
+                        <h3 class="text-[10px] font-bold text-emerald-500 uppercase tracking-widest px-1">Investimentos</h3>
+                        <div id="list-investir" class="space-y-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Registo do Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => console.log('Erro no SW:', err));
+            });
+        }
+
+        let db = JSON.parse(localStorage.getItem('meu_dia_db')) || {
+            deliveries: [],
+            espiritualidade: [],
+            pais: [],
+            lar: [],
+            gastos: [],
+            investir: [],
+            refDate: '2026-02-09',
+            theme: 'dark',
+            showCalendar: true
+        };
+
+        let currentActive = 'trabalho';
+        let calendarDate = new Date();
+        let selectedDate = new Date().toISOString().split('T')[0];
+
+        window.onload = () => {
+            applyTheme(db.theme || 'dark');
+            if(!db.showCalendar) toggleCalendar(true);
+            renderAll();
+        };
+
+        function switchView(target) {
+            document.querySelectorAll('.section-view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('view-' + target).classList.add('active');
+            document.getElementById('nav-' + target).classList.add('active');
+            currentActive = target;
+        }
+
+        function openContextualAction() {
+            selectedDate = new Date().toISOString().split('T')[0];
+            const modal = document.getElementById('global-modal');
+            const formatted = selectedDate.split('-').reverse().slice(0,2).join(' / ');
+            document.getElementById('selected-date-display').innerText = formatted;
+            document.getElementById('modal-title').innerText = "Novo em " + currentActive.charAt(0).toUpperCase() + currentActive.slice(1);
+            modal.classList.add('active');
+            setupEntry(currentActive === 'pais' ? 'pais' : currentActive);
+        }
+
+        function toggleCalendar(forceClose = false) {
+            const section = document.getElementById('calendar-section');
+            const icon = document.getElementById('cal-toggle-icon');
+            if(forceClose || !section.classList.contains('collapsed')) {
+                section.classList.add('collapsed');
+                icon.setAttribute('data-lucide', 'calendar');
+                db.showCalendar = false;
+            } else {
+                section.classList.remove('collapsed');
+                icon.setAttribute('data-lucide', 'calendar-off');
+                db.showCalendar = true;
+            }
+            lucide.createIcons();
+            save(false);
+        }
+
+        function renderCalendar() {
+            const year = calendarDate.getFullYear();
+            const month = calendarDate.getMonth();
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+            document.getElementById('cal-month-name').innerText = `${monthNames[month]} ${year}`;
+            const body = document.getElementById('calendar-body');
+            body.innerHTML = '';
+            for (let i = 0; i < firstDay; i++) body.innerHTML += '<div></div>';
+            const ref = new Date(db.refDate); ref.setHours(0,0,0,0);
+            const today = new Date(); today.setHours(0,0,0,0);
+            for (let d = 1; d <= daysInMonth; d++) {
+                const current = new Date(year, month, d);
+                current.setHours(0,0,0,0);
+                const isoStr = current.toISOString().split('T')[0];
+                const diffDays = Math.round((current - ref) / (1000 * 60 * 60 * 24));
+                const isPlantao = diffDays % 2 === 0;
+                const isToday = current.getTime() === today.getTime();
+                const dayDiv = document.createElement('div');
+                dayDiv.className = `calendar-day ${isPlantao ? 'day-plantao' : 'day-folga'} ${isToday ? 'day-today' : ''}`;
+                dayDiv.innerText = d;
+                dayDiv.onclick = () => openDayActions(isoStr);
+                body.appendChild(dayDiv);
+            }
+        }
+
+        function openDayActions(date) {
+            selectedDate = date;
+            const modal = document.getElementById('global-modal');
+            const formatted = date.split('-').reverse().slice(0,2).join(' / ');
+            document.getElementById('selected-date-display').innerText = formatted;
+            document.getElementById('modal-title').innerText = "Onde registrar?";
+            document.getElementById('modal-fields').innerHTML = "";
+            document.getElementById('quick-selection').classList.remove('hidden');
+            document.getElementById('btn-confirm').classList.add('hidden');
+            modal.classList.add('active');
+        }
+
+        function setupEntry(type) {
+            document.getElementById('quick-selection').classList.add('hidden');
+            document.getElementById('btn-confirm').classList.remove('hidden');
+            const fields = document.getElementById('modal-fields');
+            window.tempEntryType = type;
+
+            if(type === 'trabalho') {
+                fields.innerHTML = `
+                    <select id="m-work-type" class="inter-input" onchange="toggleWorkFields()">
+                        <option value="vania">Entrega Vânia (Fixo R$ 20)</option>
+                        <option value="extra">Entrega Extra (Valor Manual)</option>
+                    </select>
+                    <div id="work-inputs-container" class="space-y-4">
+                        <input id="m-qty" type="number" placeholder="Quantas entregas?" class="inter-input" autofocus>
+                    </div>
+                `;
+            } else if(type === 'financas') {
+                fields.innerHTML = `
+                    <select id="m-fin-type" class="inter-input"><option value="gastos">Despesa</option><option value="investir">Investimento</option></select>
+                    <input id="m-desc" placeholder="Descrição da transação" class="inter-input" autofocus>
+                    <input id="m-val" type="number" placeholder="Valor (R$)" class="inter-input">
+                `;
+            } else {
+                fields.innerHTML = `<input id="m-text" placeholder="O que precisa ser feito?" class="inter-input" autofocus>`;
+            }
+        }
+
+        function toggleWorkFields() {
+            const wType = document.getElementById('m-work-type').value;
+            const container = document.getElementById('work-inputs-container');
+            if(wType === 'vania') {
+                container.innerHTML = `<input id="m-qty" type="number" placeholder="Quantas entregas?" class="inter-input" autofocus>`;
+            } else {
+                container.innerHTML = `
+                    <input id="m-extra-desc" placeholder="Descrição da entrega extra" class="inter-input" autofocus>
+                    <input id="m-extra-val" type="number" placeholder="Valor Total (R$)" class="inter-input">
+                `;
+            }
+        }
+
+        function handleModalSave() {
+            const type = window.tempEntryType;
+            if(type === 'trabalho') {
+                const wType = document.getElementById('m-work-type').value;
+                if(wType === 'vania') {
+                    const qty = parseInt(document.getElementById('m-qty').value);
+                    if(qty) db.deliveries.push({ id: Date.now(), date: selectedDate, type: 'vania', qty, val: 20, total: qty * 20 });
+                } else {
+                    const desc = document.getElementById('m-extra-desc').value;
+                    const val = parseFloat(document.getElementById('m-extra-val').value);
+                    if(desc && val) db.deliveries.push({ id: Date.now(), date: selectedDate, type: 'extra', desc, total: val });
+                }
+            } else if(type === 'financas') {
+                const fType = document.getElementById('m-fin-type').value;
+                const desc = document.getElementById('m-desc').value;
+                const val = parseFloat(document.getElementById('m-val').value);
+                if(desc && val) db[fType].push({ id: Date.now(), desc, val, date: selectedDate });
+            } else {
+                const text = document.getElementById('m-text').value;
+                if(text) db[type].push({ id: Date.now(), text, done: false, date: selectedDate });
+            }
+            save();
+            closeModal();
+            switchView(type === 'trabalho' ? 'trabalho' : type === 'financas' ? 'financas' : type);
+        }
+
+        function changeMonth(val) {
+            calendarDate.setMonth(calendarDate.getMonth() + val);
+            renderCalendar();
+        }
+
+        function toggleTheme() {
+            db.theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            applyTheme(db.theme);
+            save(false);
+        }
+
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            document.getElementById('theme-icon').setAttribute('data-lucide', theme === 'light' ? 'sun' : 'moon');
+            lucide.createIcons();
+        }
+
+        function closeModal() { document.getElementById('global-modal').classList.remove('active'); }
+
+        function save(shouldRender = true) {
+            localStorage.setItem('meu_dia_db', JSON.stringify(db));
+            if(shouldRender) renderAll();
+        }
+
+        function renderAll() {
+            renderCalendar();
+            
+            const hist = document.getElementById('delivery-history');
+            hist.innerHTML = '';
+            let totalGeral = 0;
+            let sumVania = 0;
+            let sumExtras = 0;
+
+            db.deliveries.sort((a,b)=>new Date(b.date)-new Date(a.date)).forEach(item => {
+                totalGeral += item.total;
+                if(item.type === 'vania') sumVania += item.total;
+                else sumExtras += item.total;
+
+                const div = document.createElement('div');
+                div.className = "item-card flex justify-between items-center";
+                div.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-1 h-8 rounded-full ${item.type === 'vania' ? 'bg-orange-500' : 'bg-blue-500'}"></div>
+                        <div>
+                            <p class="text-[13px] font-bold">${item.type === 'vania' ? `${item.qty} Entregas (Vânia)` : item.desc}</p>
+                            <p class="text-[9px] text-[var(--text-dim)] font-medium uppercase tracking-tighter">${item.date.split('-').reverse().join('/')}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <span class="text-sm font-black">R$ ${item.total.toFixed(2)}</span>
+                        <button onclick="deleteItem('deliveries', ${item.id})" class="text-red-500/30"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </div>
+                `;
+                hist.appendChild(div);
+            });
+
+            document.getElementById('total-geral').innerText = "R$ " + totalGeral.toFixed(2);
+            document.getElementById('subtotal-vania').innerText = "R$ " + sumVania.toFixed(2);
+            document.getElementById('subtotal-extras').innerText = "R$ " + sumExtras.toFixed(2);
+
+            ['espiritualidade', 'pais', 'lar'].forEach(key => {
+                const list = document.getElementById('list-' + key);
+                list.innerHTML = '';
+                db[key].forEach(t => {
+                    const item = document.createElement('div');
+                    item.className = `item-card flex items-center justify-between mb-2 ${t.done ? 'opacity-30' : ''}`;
+                    item.innerHTML = `
+                        <div class="flex items-center gap-4 cursor-pointer flex-1" onclick="toggleTask('${key}', ${t.id})">
+                            <div class="w-6 h-6 rounded-full border-2 border-[var(--glass-border)] flex items-center justify-center ${t.done ? 'bg-[#FF7A00] border-[#FF7A00]' : ''}">
+                                ${t.done ? '<i data-lucide="check" class="text-white w-3 h-3"></i>' : ''}
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold ${t.done ? 'line-through' : ''}">${t.text}</p>
+                            </div>
+                        </div>
+                        <button onclick="deleteItem('${key}', ${t.id})" class="opacity-20"><i data-lucide="trash-2" class="w-4 h-4 text-red-500"></i></button>
+                    `;
+                    list.appendChild(item);
+                });
+            });
+
+            ['gastos', 'investir'].forEach(key => {
+                const list = document.getElementById('list-' + key);
+                list.innerHTML = '';
+                db[key].forEach(f => {
+                    const item = document.createElement('div');
+                    item.className = "flex justify-between items-center p-4 bg-[var(--input-bg)] rounded-2xl mb-2 border border-[var(--glass-border)]";
+                    item.innerHTML = `
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-tight">${f.desc}</p>
+                            <p class="opacity-40 text-[9px] font-bold">${f.date.split('-').reverse().join('/')}</p>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="text-sm font-black ${key === 'gastos' ? 'text-red-500' : 'text-emerald-500'}">R$ ${f.val.toFixed(2)}</span>
+                            <button onclick="deleteItem('${key}', ${f.id})" class="opacity-20"><i data-lucide="minus-circle" class="w-4 h-4"></i></button>
+                        </div>
+                    `;
+                    list.appendChild(item);
+                });
+            });
+
+            lucide.createIcons();
+        }
+
+        function toggleTask(key, id) {
+            const item = db[key].find(x => x.id === id);
+            if(item) item.done = !item.done;
+            save();
+        }
+
+        function deleteItem(key, id) {
+            db[key] = db[key].filter(x => x.id !== id);
+            save();
+        }
+    </script>
+</body>
+</html>
